@@ -1,0 +1,31 @@
+select
+  [nbpi.first_post_date:aggregation]
+  , sum(if(DATEDIFF(C.first_call, nbpi.first_post_date) <= 1, 1, 0))/count(distinct nbpi.user_id) as pct_called
+from
+  [new_buyer_post_info as nbpi]
+  left join (
+    select
+      p.user_id
+      , min(kc.createDate) first_call
+    from
+      krema_kremacomment kc
+      , krema_kremaqueuerecord kqr
+      , post_post p
+    where
+      kc.record_id = kqr.id
+      and kc.statusCode = 'CALLED_TOUCH'
+      and kqr.post_id = p.id
+    group by
+      p.user_id
+  )
+  C on
+    nbpi.user_id = C.user_id
+  inner join account_profile ap
+    on nbpi.user_id = ap.user_id
+  left outer join navigation_businesscategory bc
+    on ap.businessCategory_id = bc.id
+where
+  [nbpi.first_post_date=daterange]
+  and [bc.subcategory=Buyer_Industry]
+group by
+  [nbpi.first_post_date:aggregation]
